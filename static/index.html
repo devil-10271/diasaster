@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Cyclone & Coastal Disaster Early Warning System</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1c2436;
+    --border: #2a3450;
+    --text: #e2e8f0;
+    --muted: #8899bb;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .logo { font-size: 32px; }
+  header h1 { font-size: 20px; font-weight: 700; color: var(--accent2); letter-spacing: .3px; }
+  header p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    margin-left: auto; background: rgba(59,130,246,.15); border: 1px solid var(--accent);
+    color: var(--accent); font-size: 11px; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; height: calc(100vh - 73px); overflow: hidden; }
+  nav {
+    width: 230px; min-width: 230px; background: var(--surface);
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 0;
+  }
+  nav .section-label { font-size: 10px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 1px; padding: 6px 18px; margin-top: 8px; }
+  nav button {
+    width: 100%; text-align: left; background: none; border: none; color: var(--text);
+    padding: 10px 18px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    font-size: 13px; border-left: 3px solid transparent; transition: all .15s;
+  }
+  nav button:hover   { background: var(--surface2); color: var(--accent2); }
+  nav button.active  { border-left-color: var(--accent2); background: var(--surface2); color: var(--accent2); }
+  nav button .icon   { font-size: 16px; }
+
+  main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── Cards & Panels ── */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 22px; }
+  .panel h2 { font-size: 16px; font-weight: 700; color: var(--accent2); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .panel .subtitle { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  /* ── Form Elements ── */
+  label  { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 22px; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .15s;
+  }
+  .btn-primary  { background: var(--accent);  color: #fff; }
+  .btn-primary:hover  { background: #2563eb; }
+  .btn-success  { background: var(--success); color: #fff; }
+  .btn-success:hover  { background: #16a34a; }
+  .btn-warn     { background: var(--warn);    color: #000; }
+  .btn-warn:hover     { background: #d97706; }
+  .btn-danger   { background: var(--danger);  color: #fff; }
+  .btn-danger:hover   { background: #dc2626; }
+  .btn-purple   { background: var(--purple);  color: #fff; }
+  .btn-purple:hover   { background: #7c3aed; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Output ── */
+  .output-box {
+    background: #070c18; border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px; margin-top: 18px; white-space: pre-wrap; font-size: 13px;
+    line-height: 1.75; color: #c8d8f8; max-height: 520px; overflow-y: auto; display: none;
+  }
+  .output-box.visible { display: block; }
+  .output-box .section { color: var(--accent2); font-weight: 700; }
+
+  /* ── Status badges ── */
+  .status-bar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: var(--surface2); border-radius: 7px; margin-top: 14px;
+    font-size: 12px; border: 1px solid var(--border);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green  { background: var(--success); }
+  .dot.yellow { background: var(--warn); }
+  .dot.red    { background: var(--danger); }
+  .dot.blue   { background: var(--accent); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Tabs inside panel ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tab {
+    padding: 6px 14px; border-radius: 5px; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+    transition: all .15s;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Alert cards (dashboard) ── */
+  .alert-card {
+    background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);
+    padding: 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .alert-card .ac-title { font-size: 13px; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+  .alert-card .ac-meta  { font-size: 11px; color: var(--muted); }
+  .severity { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 700; }
+  .sev-extreme { background: rgba(239,68,68,.2); color: #f87171; border: 1px solid #ef4444; }
+  .sev-high    { background: rgba(245,158,11,.2); color: #fbbf24; border: 1px solid #f59e0b; }
+  .sev-moderate{ background: rgba(59,130,246,.2); color: #93c5fd; border: 1px solid #3b82f6; }
+  .sev-low     { background: rgba(34,197,94,.2);  color: #86efac; border: 1px solid #22c55e; }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: none; width: 22px; height: 22px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  .spinner.active { display: inline-block; }
+  @keyframes spin { to{ transform: rotate(360deg); } }
+
+  /* ── Page visibility ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Executive summary ── */
+  .exec-box {
+    background: linear-gradient(135deg, #0c1a35 0%, #0f2040 100%);
+    border: 1px solid var(--accent); border-radius: 10px; padding: 20px; margin-top: 20px;
+  }
+  .exec-box h3 { color: var(--accent2); font-size: 14px; margin-bottom: 10px; }
+  .exec-box p  { color: #c8d8f8; white-space: pre-wrap; font-size: 13px; line-height: 1.75; }
+
+  /* ── Stat cards ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+  .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 16px; }
+  .stat-card .s-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .stat-card .s-value { font-size: 26px; font-weight: 800; }
+  .stat-card .s-unit  { font-size: 11px; color: var(--muted); }
+  .c-blue   { color: var(--accent2); }
+  .c-warn   { color: var(--warn); }
+  .c-danger { color: var(--danger); }
+  .c-green  { color: var(--success); }
+
+  @media(max-width:900px){
+    .grid-2,.grid-3,.stat-grid{ grid-template-columns:1fr; }
+    nav{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌀</div>
+  <div>
+    <h1>AI Cyclone &amp; Coastal Disaster Early Warning System</h1>
+    <p>Powered by IBM Watsonx.ai · Granite-4-h-small · Multi-Agent Architecture</p>
+  </div>
+  <div class="badge">🤖 5 AI Agents Active</div>
+</header>
+
+<div class="app">
+  <!-- Sidebar Navigation -->
+  <nav>
+    <div class="section-label">Dashboard</div>
+    <button class="active" onclick="showPage('dashboard', this)"><span class="icon">🏠</span> Overview</button>
+
+    <div class="section-label">Pre-Landfall</div>
+    <button onclick="showPage('cyclone', this)"><span class="icon">🌀</span> Cyclone Prediction</button>
+    <button onclick="showPage('fishermen', this)"><span class="icon">🎣</span> Fishermen Alert</button>
+    <button onclick="showPage('evacuation', this)"><span class="icon">🚗</span> Evacuation Plan</button>
+    <button onclick="showPage('resources', this)"><span class="icon">📦</span> Resource Coordination</button>
+
+    <div class="section-label">Post-Landfall</div>
+    <button onclick="showPage('damage', this)"><span class="icon">🏚️</span> Damage Assessment</button>
+
+    <div class="section-label">Orchestration</div>
+    <button onclick="showPage('prelandfall_orch', this)"><span class="icon">⚡</span> Full Pre-Landfall</button>
+    <button onclick="showPage('postlandfall_orch', this)"><span class="icon">🔄</span> Full Post-Landfall</button>
+  </nav>
+
+  <main>
+    <!-- ════════════════════════════════ DASHBOARD ════════════════════════════════ -->
+    <div id="page-dashboard" class="page active">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="s-label">Active Storms</div><div class="s-value c-danger">2</div><div class="s-unit">Bay of Bengal</div></div>
+        <div class="stat-card"><div class="s-label">Population at Risk</div><div class="s-value c-warn">8.4M</div><div class="s-unit">coastal residents</div></div>
+        <div class="stat-card"><div class="s-label">Boats at Sea</div><div class="s-value c-blue">1,240</div><div class="s-unit">fishing vessels</div></div>
+        <div class="stat-card"><div class="s-label">Shelters Ready</div><div class="s-value c-green">340</div><div class="s-unit">capacity: 240,000</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>🛰️ Active AI Agent Status</h2>
+        <div class="subtitle">Real-time health of all 5 specialist agents</div>
+        <div class="grid-2">
+          <div class="alert-card">
+            <div class="ac-title">🌀 Cyclone Track &amp; Intensity Prediction <span class="severity sev-extreme">ACTIVE</span></div>
+            <div class="ac-meta">Monitoring: Cyclone Alpha · 14.5°N 82.0°E · Cat 4</div>
+          </div>
+          <div class="alert-card">
+            <div class="ac-title">🎣 Fishermen Safety Alert <span class="severity sev-high">ACTIVE</span></div>
+            <div class="ac-meta">1,240 boats tracked · Bay of Bengal Zone-3 · T-36h</div>
+          </div>
+          <div class="alert-card">
+            <div class="ac-title">🚗 Evacuation Route Planning <span class="severity sev-high">ACTIVE</span></div>
+            <div class="ac-meta">Visakhapatnam · 250,000 at risk · Phase 1 triggered</div>
+          </div>
+          <div class="alert-card">
+            <div class="ac-title">📦 Relief Resource Coordination <span class="severity sev-moderate">STANDBY</span></div>
+            <div class="ac-meta">8 NDRF teams · 3 districts · Pre-positioning in progress</div>
+          </div>
+          <div class="alert-card">
+            <div class="ac-title">🏚️ Post-Disaster Damage Assessment <span class="severity sev-low">WAITING</span></div>
+            <div class="ac-meta">Activated on landfall · Satellite feed connected</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>⚡ Quick Launch</h2>
+        <div class="subtitle">Run full orchestrated workflows with default data</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="showPage('prelandfall_orch', document.querySelector('[onclick*=prelandfall_orch]'))">⚡ Run Pre-Landfall Analysis</button>
+          <button class="btn btn-warn" onclick="showPage('postlandfall_orch', document.querySelector('[onclick*=postlandfall_orch]'))">🔄 Run Post-Landfall Analysis</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ CYCLONE PREDICTION ════════════════════════════════ -->
+    <div id="page-cyclone" class="page">
+      <div class="panel">
+        <h2>🌀 Cyclone Track &amp; Intensity Prediction Agent</h2>
+        <div class="subtitle">IBM Granite analyses SST, pressure, wind speed, and position to forecast trajectory and intensity</div>
+        <div class="grid-2">
+          <div><label>Storm Name</label><input id="cp-name" value="Cyclone-Alpha"/></div>
+          <div><label>Current Position (lat, lon)</label>
+            <div style="display:flex;gap:8px">
+              <input id="cp-lat" type="number" step="0.01" value="14.5" placeholder="Lat"/>
+              <input id="cp-lon" type="number" step="0.01" value="82.0" placeholder="Lon"/>
+            </div>
+          </div>
+          <div><label>Sea Surface Temp (°C)</label><input id="cp-sst" type="number" step="0.1" value="29.5"/></div>
+          <div><label>Central Pressure (hPa)</label><input id="cp-pres" type="number" step="1" value="960"/></div>
+          <div><label>Max Wind Speed (km/h)</label><input id="cp-wind" type="number" step="1" value="185"/></div>
+          <div><label>Additional Notes</label><textarea id="cp-notes" placeholder="Satellite observations, reanalysis data..."></textarea></div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-primary" onclick="runAgent('cyclone')">🌀 Predict Cyclone Track</button>
+          <div class="spinner" id="spinner-cyclone"></div>
+        </div>
+        <div class="status-bar" id="status-cyclone" style="display:none">
+          <div class="dot blue"></div><span id="status-cyclone-text">Processing...</span>
+        </div>
+        <div class="output-box" id="output-cyclone"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ FISHERMEN ALERT ════════════════════════════════ -->
+    <div id="page-fishermen" class="page">
+      <div class="panel">
+        <h2>🎣 Fishermen Safety Alert Agent</h2>
+        <div class="subtitle">Generates targeted life-saving alerts for fishing communities and coastal boats</div>
+        <div class="grid-2">
+          <div><label>Storm Name</label><input id="fa-name" value="Cyclone-Alpha"/></div>
+          <div><label>Hours to Landfall</label><input id="fa-hours" type="number" step="0.5" value="36"/></div>
+          <div><label>Landfall Location</label><input id="fa-location" value="Visakhapatnam coast, Andhra Pradesh"/></div>
+          <div><label>Max Wind Speed (km/h)</label><input id="fa-wind" type="number" value="185"/></div>
+          <div><label>Expected Wave Height (m)</label><input id="fa-wave" type="number" step="0.1" value="6.5"/></div>
+          <div><label>Estimated Boats at Sea</label><input id="fa-boats" type="number" value="250"/></div>
+          <div><label>Active Fishing Zones (comma-separated)</label>
+            <input id="fa-zones" value="Bay of Bengal Zone-3, Kakinada Bay"/></div>
+          <div><label>Additional Notes</label><textarea id="fa-notes" placeholder="Boat types, radio coverage gaps..."></textarea></div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-warn" onclick="runAgent('fishermen')">🎣 Generate Alert</button>
+          <div class="spinner" id="spinner-fishermen"></div>
+        </div>
+        <div class="status-bar" id="status-fishermen" style="display:none">
+          <div class="dot blue"></div><span id="status-fishermen-text">Processing...</span>
+        </div>
+        <div class="output-box" id="output-fishermen"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ EVACUATION ════════════════════════════════ -->
+    <div id="page-evacuation" class="page">
+      <div class="panel">
+        <h2>🚗 Evacuation Route Planning Agent</h2>
+        <div class="subtitle">Phased evacuation plan with primary/alternate routes, shelter logistics, and special-needs population</div>
+        <div class="grid-3">
+          <div><label>Storm Name</label><input id="ev-name" value="Cyclone-Alpha"/></div>
+          <div><label>District</label><input id="ev-district" value="Visakhapatnam"/></div>
+          <div><label>State</label><input id="ev-state" value="Andhra Pradesh"/></div>
+          <div><label>Population at Risk</label><input id="ev-pop" type="number" value="250000"/></div>
+          <div><label>Hours to Landfall</label><input id="ev-hours" type="number" value="36"/></div>
+          <div><label>Inundation Belt Width (km)</label><input id="ev-inund" type="number" step="0.5" value="5"/></div>
+          <div><label>Available Shelters</label><input id="ev-shelters" type="number" value="120"/></div>
+          <div><label>Total Shelter Capacity</label><input id="ev-capacity" type="number" value="80000"/></div>
+          <div><label>Additional Notes</label><textarea id="ev-notes" placeholder="Road conditions, special concerns..."></textarea></div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-success" onclick="runAgent('evacuation')">🚗 Generate Evacuation Plan</button>
+          <div class="spinner" id="spinner-evacuation"></div>
+        </div>
+        <div class="status-bar" id="status-evacuation" style="display:none">
+          <div class="dot blue"></div><span id="status-evacuation-text">Processing...</span>
+        </div>
+        <div class="output-box" id="output-evacuation"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ RESOURCES ════════════════════════════════ -->
+    <div id="page-resources" class="page">
+      <div class="panel">
+        <h2>📦 Relief Resource Coordination Agent</h2>
+        <div class="subtitle">Pre-positioning strategy, NDRF/SDRF deployment, medical readiness, and 72-hour logistics schedule</div>
+        <div class="grid-2">
+          <div><label>Storm Name</label><input id="rc-name" value="Cyclone-Alpha"/></div>
+          <div><label>Storm Category (1-5)</label>
+            <select id="rc-cat">
+              <option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option>
+            </select>
+          </div>
+          <div><label>Affected Districts (comma-separated)</label>
+            <input id="rc-districts" value="Visakhapatnam, Srikakulam, Vizianagaram"/></div>
+          <div><label>Total Population Affected</label><input id="rc-pop" type="number" value="800000"/></div>
+          <div><label>Hours to Landfall</label><input id="rc-hours" type="number" value="36"/></div>
+          <div><label>Available NDRF Teams</label><input id="rc-ndrf" type="number" value="8"/></div>
+          <div><label>Nearest Depot Distance (km)</label><input id="rc-depot" type="number" value="120"/></div>
+          <div><label>Additional Notes</label><textarea id="rc-notes" placeholder="Existing stockpile levels, NGO partnerships..."></textarea></div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-purple" onclick="runAgent('resources')">📦 Coordinate Resources</button>
+          <div class="spinner" id="spinner-resources"></div>
+        </div>
+        <div class="status-bar" id="status-resources" style="display:none">
+          <div class="dot blue"></div><span id="status-resources-text">Processing...</span>
+        </div>
+        <div class="output-box" id="output-resources"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ DAMAGE ASSESSMENT ════════════════════════════════ -->
+    <div id="page-damage" class="page">
+      <div class="panel">
+        <h2>🏚️ Post-Disaster Damage Assessment Agent</h2>
+        <div class="subtitle">Sector-wise damage score, recovery timeline, economic loss estimate, and PDNA-aligned recommendations</div>
+        <div class="grid-3">
+          <div><label>Storm Name</label><input id="da-name" value="Cyclone-Alpha"/></div>
+          <div><label>Landfall Location</label><input id="da-location" value="Visakhapatnam coast, AP"/></div>
+          <div><label>Storm Category (1-5)</label>
+            <select id="da-cat">
+              <option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option>
+            </select>
+          </div>
+          <div><label>Hours Since Landfall</label><input id="da-hours" type="number" value="12"/></div>
+          <div><label>Reported Casualties</label><input id="da-casualties" type="number" value="0"/></div>
+          <div><label>Houses Damaged</label><input id="da-houses" type="number" value="15000"/></div>
+          <div><label>Roads Blocked (km)</label><input id="da-roads" type="number" value="340"/></div>
+          <div><label>Villages Without Power</label><input id="da-power" type="number" value="2200"/></div>
+          <div><label>Crop Loss (hectares)</label><input id="da-crop" type="number" value="45000"/></div>
+          <div><label>Fishing Boats Damaged</label><input id="da-boats" type="number" value="320"/></div>
+          <div style="grid-column:1/-1"><label>Additional Field Notes</label>
+            <textarea id="da-notes" placeholder="Hospital status, telecom outages, satellite observations..."></textarea></div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-danger" onclick="runAgent('damage')">🏚️ Generate Assessment</button>
+          <div class="spinner" id="spinner-damage"></div>
+        </div>
+        <div class="status-bar" id="status-damage" style="display:none">
+          <div class="dot blue"></div><span id="status-damage-text">Processing...</span>
+        </div>
+        <div class="output-box" id="output-damage"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ PRE-LANDFALL ORCHESTRATION ════════════════════════════════ -->
+    <div id="page-prelandfall_orch" class="page">
+      <div class="panel">
+        <h2>⚡ Full Pre-Landfall Orchestration</h2>
+        <div class="subtitle">Runs all 4 pre-landfall agents in parallel (Cyclone Prediction + Fishermen Alert + Evacuation + Resources) and produces a fused Executive Briefing</div>
+
+        <div class="tabs" id="orch-tabs">
+          <div class="tab active" onclick="switchTab('storm')">🌀 Storm Data</div>
+          <div class="tab" onclick="switchTab('coast')">🏖️ Coastal & Fleet</div>
+          <div class="tab" onclick="switchTab('relief')">📦 Relief</div>
+        </div>
+
+        <div id="tab-storm">
+          <div class="grid-3">
+            <div><label>Storm Name</label><input id="o-name" value="Cyclone-Alpha"/></div>
+            <div><label>Lat</label><input id="o-lat" type="number" step="0.01" value="14.5"/></div>
+            <div><label>Lon</label><input id="o-lon" type="number" step="0.01" value="82.0"/></div>
+            <div><label>SST (°C)</label><input id="o-sst" type="number" step="0.1" value="29.5"/></div>
+            <div><label>Pressure (hPa)</label><input id="o-pres" type="number" value="960"/></div>
+            <div><label>Max Wind (km/h)</label><input id="o-wind" type="number" value="185"/></div>
+            <div><label>Hours to Landfall</label><input id="o-hours" type="number" value="36"/></div>
+            <div><label>Landfall Location</label><input id="o-landloc" value="Visakhapatnam coast, AP"/></div>
+            <div><label>Wave Height (m)</label><input id="o-wave" type="number" step="0.1" value="6.5"/></div>
+          </div>
+        </div>
+        <div id="tab-coast" style="display:none">
+          <div class="grid-3">
+            <div><label>District</label><input id="o-district" value="Visakhapatnam"/></div>
+            <div><label>State</label><input id="o-state" value="Andhra Pradesh"/></div>
+            <div><label>Population at Risk</label><input id="o-pop" type="number" value="250000"/></div>
+            <div><label>Inundation Zone (km)</label><input id="o-inund" type="number" step="0.5" value="5"/></div>
+            <div><label>Available Shelters</label><input id="o-shelters" type="number" value="120"/></div>
+            <div><label>Shelter Capacity</label><input id="o-shelcap" type="number" value="80000"/></div>
+            <div><label>Boats at Sea</label><input id="o-fleet" type="number" value="250"/></div>
+            <div><label>Fishing Zones (comma-separated)</label>
+              <input id="o-zones" value="Bay of Bengal Zone-3, Kakinada Bay"/></div>
+          </div>
+        </div>
+        <div id="tab-relief" style="display:none">
+          <div class="grid-3">
+            <div><label>Affected Districts (comma-separated)</label>
+              <input id="o-rdist" value="Visakhapatnam, Srikakulam, Vizianagaram"/></div>
+            <div><label>Total Population Affected</label><input id="o-rpop" type="number" value="800000"/></div>
+            <div><label>Storm Category</label>
+              <select id="o-rcat"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option></select>
+            </div>
+            <div><label>NDRF Teams Available</label><input id="o-ndrf" type="number" value="8"/></div>
+            <div><label>Nearest Depot (km)</label><input id="o-depot" type="number" value="120"/></div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-primary" onclick="runOrchestrate('pre')">⚡ Run Full Pre-Landfall Analysis</button>
+          <div class="spinner" id="spinner-pre"></div>
+          <span id="pre-timer" style="color:var(--muted);font-size:12px"></span>
+        </div>
+        <div class="status-bar" id="status-pre" style="display:none">
+          <div class="dot blue"></div><span id="status-pre-text">Running 4 agents in parallel...</span>
+        </div>
+        <div id="pre-agents-output"></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════ POST-LANDFALL ORCHESTRATION ════════════════════════════════ -->
+    <div id="page-postlandfall_orch" class="page">
+      <div class="panel">
+        <h2>🔄 Full Post-Landfall Orchestration</h2>
+        <div class="subtitle">Runs Damage Assessment + Resource Coordination agents and produces a fused Recovery Briefing</div>
+        <div class="grid-3">
+          <div><label>Storm Name</label><input id="po-name" value="Cyclone-Alpha"/></div>
+          <div><label>Landfall Location</label><input id="po-location" value="Visakhapatnam coast, AP"/></div>
+          <div><label>Storm Category</label>
+            <select id="po-cat"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option></select>
+          </div>
+          <div><label>Hours Since Landfall</label><input id="po-hours" type="number" value="12"/></div>
+          <div><label>Casualties</label><input id="po-casualties" type="number" value="0"/></div>
+          <div><label>Houses Damaged</label><input id="po-houses" type="number" value="15000"/></div>
+          <div><label>Roads Blocked (km)</label><input id="po-roads" type="number" value="340"/></div>
+          <div><label>Villages Without Power</label><input id="po-power" type="number" value="2200"/></div>
+          <div><label>Crop Loss (ha)</label><input id="po-crop" type="number" value="45000"/></div>
+          <div><label>Boats Damaged</label><input id="po-boats" type="number" value="320"/></div>
+          <div><label>Affected Districts</label><input id="po-rdist" value="Visakhapatnam, Srikakulam, Vizianagaram"/></div>
+          <div><label>Total Population Affected</label><input id="po-rpop" type="number" value="800000"/></div>
+          <div><label>NDRF Teams</label><input id="po-ndrf" type="number" value="8"/></div>
+          <div><label>Nearest Depot (km)</label><input id="po-depot" type="number" value="120"/></div>
+          <div style="grid-column:1/-1"><label>Additional Field Notes</label>
+            <textarea id="po-notes" placeholder="Current conditions, priorities..."></textarea></div>
+        </div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+          <button class="btn btn-warn" onclick="runOrchestrate('post')">🔄 Run Full Post-Landfall Analysis</button>
+          <div class="spinner" id="spinner-post"></div>
+          <span id="post-timer" style="color:var(--muted);font-size:12px"></span>
+        </div>
+        <div class="status-bar" id="status-post" style="display:none">
+          <div class="dot blue"></div><span id="status-post-text">Running 2 agents in parallel...</span>
+        </div>
+        <div id="post-agents-output"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Navigation ──────────────────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ── Tab switcher (orchestration form) ───────────────────────────────────────
+function switchTab(tab) {
+  ['storm','coast','relief'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll('#orch-tabs .tab').forEach((el, i) => {
+    el.classList.toggle('active', ['storm','coast','relief'][i] === tab);
+  });
+}
+
+// ── Helper: format output text ────────────────────────────────────────────────
+function formatOutput(text) {
+  return text
+    .replace(/^(#{1,3} .+)$/gm, '<span class="section">$1</span>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(RISK LEVEL|ALERT SEVERITY|READINESS STATUS|LOGISTICS STATUS|RESPONSE PRIORITY|OVERALL STATUS): (.+)/gi,
+      (m, k, v) => `<strong style="color:var(--warn)">${k}: <span style="color:#f87171">${v}</span></strong>`);
+}
+
+// ── Individual Agent Calls ────────────────────────────────────────────────────
+async function runAgent(agent) {
+  const endpoints = {
+    cyclone:    { url: '/agents/cyclone-prediction',   field: 'prediction' },
+    fishermen:  { url: '/agents/fishermen-alert',      field: 'alert' },
+    evacuation: { url: '/agents/evacuation-plan',      field: 'plan' },
+    resources:  { url: '/agents/resource-coordination',field: 'plan' },
+    damage:     { url: '/agents/damage-assessment',    field: 'assessment' },
+  };
+  const cfg = endpoints[agent];
+  const spinner   = document.getElementById('spinner-' + agent);
+  const statusBar = document.getElementById('status-' + agent);
+  const statusTxt = document.getElementById('status-' + agent + '-text');
+  const outputBox = document.getElementById('output-' + agent);
+
+  const body = buildBody(agent);
+  spinner.classList.add('active');
+  statusBar.style.display = 'flex';
+  statusTxt.textContent = 'Sending request to IBM Watsonx.ai...';
+  outputBox.classList.remove('visible');
+
+  try {
+    const res  = await fetch(cfg.url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Server error');
+    outputBox.innerHTML = formatOutput(data[cfg.field] || JSON.stringify(data, null, 2));
+    outputBox.classList.add('visible');
+    statusTxt.textContent = '✅ Response received from Granite model.';
+    statusBar.querySelector('.dot').className = 'dot green';
+  } catch(e) {
+    outputBox.innerHTML = '❌ Error: ' + e.message;
+    outputBox.classList.add('visible');
+    statusTxt.textContent = '❌ Failed — see output above.';
+    statusBar.querySelector('.dot').className = 'dot red';
+  } finally {
+    spinner.classList.remove('active');
+  }
+}
+
+// ── Orchestration calls ───────────────────────────────────────────────────────
+async function runOrchestrate(phase) {
+  const url = phase === 'pre' ? '/orchestrate/pre-landfall' : '/orchestrate/post-landfall';
+  const spinner   = document.getElementById('spinner-' + phase);
+  const statusBar = document.getElementById('status-' + phase);
+  const statusTxt = document.getElementById('status-' + phase + '-text');
+  const outputDiv = document.getElementById(phase + '-agents-output');
+  const timerEl   = document.getElementById(phase + '-timer');
+
+  spinner.classList.add('active');
+  statusBar.style.display = 'flex';
+  outputDiv.innerHTML = '';
+  timerEl.textContent = '';
+
+  const t0 = Date.now();
+  const ticker = setInterval(() => {
+    timerEl.textContent = `⏱ ${((Date.now()-t0)/1000).toFixed(1)}s`;
+  }, 200);
+
+  try {
+    const body = phase === 'pre' ? buildPreOrchBody() : buildPostOrchBody();
+    const res  = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    clearInterval(ticker);
+    timerEl.textContent = `✅ Completed in ${((Date.now()-t0)/1000).toFixed(1)}s`;
+
+    if (!res.ok) throw new Error(data.detail || 'Server error');
+
+    // Executive summary
+    let html = `<div class="exec-box">
+      <h3>📋 Executive Briefing</h3>
+      <p>${formatOutput(data.executive_summary || '(No summary generated)')}</p>
+    </div>`;
+
+    // Individual agent outputs
+    const outputs = data.agent_outputs || {};
+    for (const [name, agentData] of Object.entries(outputs)) {
+      const content = agentData.prediction || agentData.alert || agentData.plan || agentData.assessment || '';
+      html += `<div class="panel" style="margin-top:16px">
+        <h2 style="font-size:14px">${agentIcons[name] || '🤖'} ${name}</h2>
+        <div class="output-box visible" style="margin-top:10px">${formatOutput(content)}</div>
+      </div>`;
+    }
+
+    // Errors
+    const errors = data.errors || {};
+    for (const [name, err] of Object.entries(errors)) {
+      html += `<div style="color:var(--danger);padding:10px;background:rgba(239,68,68,.1);border-radius:6px;margin-top:8px">⚠️ ${name}: ${err}</div>`;
+    }
+
+    outputDiv.innerHTML = html;
+    statusTxt.textContent = `✅ All agents completed · ${Object.keys(outputs).length} responses received.`;
+    statusBar.querySelector('.dot').className = 'dot green';
+  } catch(e) {
+    clearInterval(ticker);
+    outputDiv.innerHTML = `<div style="color:var(--danger);padding:14px;background:rgba(239,68,68,.1);border-radius:8px">❌ Error: ${e.message}</div>`;
+    statusTxt.textContent = '❌ Orchestration failed.';
+    statusBar.querySelector('.dot').className = 'dot red';
+    timerEl.textContent = '';
+  } finally {
+    spinner.classList.remove('active');
+  }
+}
+
+const agentIcons = {
+  'Cyclone Prediction': '🌀',
+  'Fishermen Alert': '🎣',
+  'Evacuation Plan': '🚗',
+  'Resource Coordination': '📦',
+  'Damage Assessment': '🏚️',
+};
+
+// ── Body builders ──────────────────────────────────────────────────────────────
+function v(id) { return document.getElementById(id)?.value; }
+function n(id) { return parseFloat(v(id)); }
+function i(id) { return parseInt(v(id)); }
+function splitCSV(id) { return v(id).split(',').map(s => s.trim()).filter(Boolean); }
+
+function buildBody(agent) {
+  switch(agent) {
+    case 'cyclone': return {
+      storm_name: v('cp-name'), lat: n('cp-lat'), lon: n('cp-lon'),
+      sea_surface_temp_c: n('cp-sst'), central_pressure_hpa: n('cp-pres'),
+      max_wind_speed_kmh: n('cp-wind'), additional_context: v('cp-notes'),
+    };
+    case 'fishermen': return {
+      storm_name: v('fa-name'), hours_to_landfall: n('fa-hours'),
+      landfall_location: v('fa-location'), max_wind_kmh: n('fa-wind'),
+      wave_height_m: n('fa-wave'), fleet_count: i('fa-boats'),
+      active_fishing_zones: splitCSV('fa-zones'), additional_context: v('fa-notes'),
+    };
+    case 'evacuation': return {
+      storm_name: v('ev-name'), district: v('ev-district'), state: v('ev-state'),
+      population_at_risk: i('ev-pop'), hours_to_landfall: n('ev-hours'),
+      inundation_zone_km: n('ev-inund'), available_shelters: i('ev-shelters'),
+      shelter_capacity: i('ev-capacity'), additional_context: v('ev-notes'),
+    };
+    case 'resources': return {
+      storm_name: v('rc-name'), storm_category: i('rc-cat'),
+      affected_districts: splitCSV('rc-districts'), total_population_affected: i('rc-pop'),
+      hours_to_landfall: n('rc-hours'), available_ndrf_teams: i('rc-ndrf'),
+      nearest_depot_km: n('rc-depot'), additional_context: v('rc-notes'),
+    };
+    case 'damage': return {
+      storm_name: v('da-name'), landfall_location: v('da-location'),
+      storm_category: i('da-cat'), hours_since_landfall: n('da-hours'),
+      reported_casualties: i('da-casualties'), houses_damaged: i('da-houses'),
+      roads_blocked_km: n('da-roads'), power_outage_villages: i('da-power'),
+      crop_loss_hectares: n('da-crop'), boats_damaged: i('da-boats'),
+      additional_context: v('da-notes'),
+    };
+  }
+}
+
+function buildPreOrchBody() {
+  return {
+    storm_name: v('o-name'), lat: n('o-lat'), lon: n('o-lon'),
+    sea_surface_temp_c: n('o-sst'), central_pressure_hpa: n('o-pres'),
+    max_wind_kmh: n('o-wind'), hours_to_landfall: n('o-hours'),
+    landfall_location: v('o-landloc'), wave_height_m: n('o-wave'),
+    district: v('o-district'), state: v('o-state'),
+    population_at_risk: i('o-pop'), inundation_zone_km: n('o-inund'),
+    available_shelters: i('o-shelters'), shelter_capacity: i('o-shelcap'),
+    affected_districts: splitCSV('o-rdist'), total_population_affected: i('o-rpop'),
+    storm_category: i('o-rcat'), available_ndrf_teams: i('o-ndrf'),
+    nearest_depot_km: n('o-depot'), fleet_count: i('o-fleet'),
+    active_fishing_zones: splitCSV('o-zones'),
+  };
+}
+
+function buildPostOrchBody() {
+  return {
+    storm_name: v('po-name'), landfall_location: v('po-location'),
+    storm_category: i('po-cat'), hours_since_landfall: n('po-hours'),
+    reported_casualties: i('po-casualties'), houses_damaged: i('po-houses'),
+    roads_blocked_km: n('po-roads'), power_outage_villages: i('po-power'),
+    crop_loss_hectares: n('po-crop'), boats_damaged: i('po-boats'),
+    affected_districts: splitCSV('po-rdist'), total_population_affected: i('po-rpop'),
+    available_ndrf_teams: i('po-ndrf'), nearest_depot_km: n('po-depot'),
+    additional_context: v('po-notes'),
+  };
+}
+</script>
+</body>
+</html>
